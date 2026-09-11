@@ -6,6 +6,6 @@ Patch cords are recent txs — tip/ring colors by program family. Lamp board bli
 
 Not an explorer. Not a dashboard. Not a newspaper.
 
-**IN FLIGHT** — cloud agent building next.
+**IN FLIGHT** cloud `bc-7aa32623-d552-48a9-9c0e-60153f2838c6`
 
 Target live: https://robertkodes.github.io/slotswitch/
