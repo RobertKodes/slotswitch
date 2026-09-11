@@ -192,6 +192,7 @@ export class Switchboard {
     const lay = this.measure(w, h)
     this.layout = lay
     this.ensureBanks(lay)
+    this.clampCords(lay)
 
     ctx.clearRect(0, 0, w, h)
     this.drawOffice(ctx, w, h)
@@ -206,6 +207,14 @@ export class Switchboard {
     if (this.frozen) this.drawNightVeil(ctx, lay)
   }
 
+  private clampCords(lay: Layout) {
+    for (const c of this.cords) {
+      c.col = c.col % lay.cols
+      c.row = c.row % lay.rows
+      c.shelf = c.shelf % Math.max(lay.cols, 8)
+    }
+  }
+
   private ensureBanks(lay: Layout) {
     while (this.lamps.length < lay.lamps) this.lamps.push({ heat: 0, fail: 0, answer: 0 })
     if (this.lamps.length > lay.lamps) this.lamps.length = lay.lamps
@@ -214,12 +223,12 @@ export class Switchboard {
   }
 
   private measure(w: number, h: number): Layout {
-    const pad = Math.max(8, Math.min(w, h) * 0.028)
-    const frame = { x: pad, y: pad * 0.6, w: w - pad * 2, h: h - pad * 1.4 }
-    const ft = clamp(Math.min(w, h) * 0.028, 10, 18)
+    const pad = Math.max(6, Math.min(w, h) * 0.018)
+    const frame = { x: pad, y: pad * 0.5, w: w - pad * 2, h: h - pad * 1.15 }
+    const ft = clamp(Math.min(w, h) * 0.042, 16, 28)
     const panel = { x: frame.x + ft, y: frame.y + ft * 0.85, w: frame.w - ft * 2, h: frame.h - ft * 1.85 }
-    const lampH = clamp(panel.h * 0.16, 36, 72)
-    const shelfH = clamp(panel.h * 0.2, 44, 88)
+    const lampH = clamp(panel.h * 0.15, 40, 78)
+    const shelfH = clamp(panel.h * 0.24, 56, 110)
     const lampBand = { x: panel.x + 10, y: panel.y + 8, w: panel.w - 20, h: lampH }
     const jackField = {
       x: panel.x + 12,
@@ -237,7 +246,7 @@ export class Switchboard {
     const rows = h < 460 ? 4 : h < 620 ? 5 : 6
     const colW = jackField.w / cols
     const rowH = jackField.h / (rows + 0.35)
-    const jackR = clamp(Math.min(colW, rowH) * 0.28, 5.5, 11)
+    const jackR = clamp(Math.min(colW, rowH) * 0.32, 6.5, 13)
     const lamps = cols
     return { cols, rows, lamps, frame, panel, lampBand, jackField, shelf, jackR, colW, rowH }
   }
@@ -341,9 +350,9 @@ export class Switchboard {
   private drawFrame(ctx: CanvasRenderingContext2D, lay: Layout) {
     const { frame } = lay
     const wood = ctx.createLinearGradient(frame.x, frame.y, frame.x + frame.w, frame.y + frame.h)
-    wood.addColorStop(0, '#3A2416')
-    wood.addColorStop(0.45, '#2A1910')
-    wood.addColorStop(1, '#1A100A')
+    wood.addColorStop(0, '#4A2E1A')
+    wood.addColorStop(0.45, '#322012')
+    wood.addColorStop(1, '#1E120A')
     ctx.fillStyle = wood
     ctx.beginPath()
     ctx.roundRect(frame.x, frame.y, frame.w, frame.h, 6)
@@ -429,7 +438,7 @@ export class Switchboard {
     ctx.fillText('SUPERVISORY', lampBand.x + 8, lampBand.y + 12)
 
     const inner = { x: lampBand.x + 8, y: lampBand.y + 16, w: lampBand.w - 16, h: lampBand.h - 22 }
-    const r = clamp(inner.h * 0.28, 5, 9)
+    const r = clamp(inner.h * 0.32, 6, 11)
     for (let i = 0; i < lamps; i++) {
       const x = inner.x + ((i + 0.5) * inner.w) / lamps
       const y = inner.y + inner.h * 0.58
@@ -546,15 +555,16 @@ export class Switchboard {
   private cord(ctx: CanvasRenderingContext2D, lay: Layout, c: Cord) {
     const jack = this.jackAt(lay, c.col, c.row)
     const sx = this.shelfX(lay, c.shelf)
-    const sy = lay.shelf.y + 10
+    const sy = lay.shelf.y + 16
     const t = c.progress
-    const wob = c.state === 'dropping' ? Math.sin(c.wobble) * 8 * (1 - t) : 0
+    const wob = c.state === 'dropping' ? Math.sin(c.wobble) * 10 * (1 - t) : 0
     const ex = jack.x + wob
     const ey = jack.y
-    const cx1 = sx + (ex - sx) * 0.15
-    const cy1 = sy + 18
-    const cx2 = sx + (ex - sx) * 0.55
-    const cy2 = sy - (sy - ey) * 0.25 + 20 * (1 - t)
+    const hang = 22 + (1 - t) * 10
+    const cx1 = sx
+    const cy1 = sy + hang
+    const cx2 = ex
+    const cy2 = ey + (sy - ey) * 0.42
 
     const px = (u: number) => {
       const mt = 1 - u
@@ -566,39 +576,45 @@ export class Switchboard {
     }
 
     const tint = c.failed ? PALETTE.oxblood : familyColor(c.family)
-    const cloth = mix(PALETTE.bakelite, tint, 0.18)
+    const cloth = mix(PALETTE.bakelite, tint, 0.28)
 
     ctx.save()
     ctx.lineCap = 'round'
     ctx.lineJoin = 'round'
+    ctx.shadowColor = 'rgba(0,0,0,0.45)'
+    ctx.shadowBlur = 4
+    ctx.shadowOffsetY = 2
     ctx.beginPath()
     ctx.moveTo(sx, sy)
     ctx.bezierCurveTo(cx1, cy1, cx2, cy2, px(t), py(t))
+    ctx.strokeStyle = '#0A0705'
+    ctx.lineWidth = 9.5
+    ctx.stroke()
+    ctx.shadowColor = 'transparent'
     ctx.strokeStyle = cloth
-    ctx.lineWidth = 5.2
+    ctx.lineWidth = 7.2
     ctx.stroke()
     ctx.strokeStyle = tint
-    ctx.lineWidth = 2.2
+    ctx.lineWidth = 3.1
     ctx.stroke()
 
-    const tip = t
-    const tx = px(tip)
-    const ty = py(tip)
+    const tx = px(t)
+    const ty = py(t)
     ctx.beginPath()
-    ctx.arc(tx, ty, 4.2, 0, Math.PI * 2)
-    ctx.fillStyle = mix(PALETTE.brass, tint, 0.25)
+    ctx.arc(tx, ty, 5.4, 0, Math.PI * 2)
+    ctx.fillStyle = mix(PALETTE.brass, tint, 0.2)
     ctx.fill()
     ctx.beginPath()
-    ctx.arc(tx, ty, 2.4, 0, Math.PI * 2)
+    ctx.arc(tx, ty, 3.1, 0, Math.PI * 2)
     ctx.fillStyle = tint
     ctx.fill()
 
+    ctx.fillStyle = mix(PALETTE.brass, PALETTE.bakelite, 0.12)
     ctx.beginPath()
-    ctx.roundRect(sx - 4, sy - 2, 8, 14, 2)
-    ctx.fillStyle = mix(PALETTE.brass, PALETTE.bakelite, 0.2)
+    ctx.roundRect(sx - 5.5, sy - 4, 11, 20, 2)
     ctx.fill()
     ctx.fillStyle = tint
-    ctx.fillRect(sx - 4, sy + 6, 8, 3)
+    ctx.fillRect(sx - 5.5, sy + 10, 11, 4)
     ctx.restore()
   }
 
@@ -651,11 +667,19 @@ export class Switchboard {
     for (let i = 0; i < n; i++) {
       const x = this.shelfX(lay, i)
       const used = this.cords.some((c) => c.shelf === i)
-      ctx.fillStyle = mix(PALETTE.brass, PALETTE.soot, used ? 0.15 : 0.45)
-      ctx.fillRect(x - 3.5, shelf.y + 8, 7, used ? 8 : 18)
+      ctx.strokeStyle = mix(PALETTE.soot, PALETTE.brass, 0.15)
+      ctx.lineWidth = 4.5
+      ctx.beginPath()
+      ctx.moveTo(x, shelf.y + 6)
+      ctx.lineTo(x, shelf.y + (used ? 16 : 34))
+      ctx.stroke()
+      ctx.fillStyle = mix(PALETTE.brass, PALETTE.soot, used ? 0.2 : 0.35)
+      ctx.beginPath()
+      ctx.roundRect(x - 5, shelf.y + 4, 10, used ? 12 : 28, 2)
+      ctx.fill()
       if (!used) {
-        ctx.fillStyle = mix(PALETTE.bakelite, PALETTE.ivory, 0.15)
-        ctx.fillRect(x - 3.5, shelf.y + 20, 7, 6)
+        ctx.fillStyle = mix(PALETTE.ivory, PALETTE.bakelite, 0.35)
+        ctx.fillRect(x - 5, shelf.y + 24, 10, 4)
       }
     }
   }
@@ -666,7 +690,6 @@ export class Switchboard {
     ctx.fillStyle = mix(PALETTE.brass, PALETTE.bakelite, 0.25)
     ctx.font = `600 ${Math.max(9, panel.w * 0.014)}px Oswald, sans-serif`
     ctx.textAlign = 'right'
-    ctx.letterSpacing = '0.18em'
     ctx.fillText('WESTERN ELECTRIC  ·  605A  ·  SLOT OFFICE', panel.x + panel.w - 12, panel.y + panel.h - 8)
     ctx.restore()
   }
