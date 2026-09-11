@@ -87,9 +87,9 @@ h1 {
   margin: 0.1rem 0 0;
   font-family: 'Azeret Mono', ui-monospace, monospace;
   font-weight: 400;
-  font-size: 0.72rem;
-  letter-spacing: 0.04em;
-  word-spacing: 0.18em;
+  font-size: 0.78rem;
+  letter-spacing: 0.03em;
+  word-spacing: 0.5em;
   color: color-mix(in srgb, var(--ivory) 78%, var(--soot));
 }
 
